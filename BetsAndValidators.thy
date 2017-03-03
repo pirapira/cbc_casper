@@ -107,6 +107,7 @@ lemma two_latests_are_equivocation :
 apply(simp add: equivocation_def latest_bets_def)
 done
 
+
 definition at_most_one :: "'a set \<Rightarrow> bool"
 where
 "at_most_one s = (\<forall> x y. x \<in> s \<longrightarrow> y \<in> s \<longrightarrow> x = y)"
@@ -114,32 +115,54 @@ where
 lemma view_has_at_most_one_latest_bet :
   "is_view bs \<Longrightarrow>
    at_most_one (latest_bets bs v)"
-apply(auto simp add: at_most_one_def is_view_def latest_bets_def equivocation_def)
-done
+by (smt at_most_one_def is_view_def latest_bets_def mem_Collect_eq two_latests_are_equivocation)
+
+definition is_non_empty :: "'a set \<Rightarrow> bool"
+where
+"is_non_empty bs =
+  ( \<exists>b. b\<in>bs )
+"
+
+lemma should_be_not_be_non_empty :
+  "\<not>is_non_empty {}"
+by(simp add: is_non_empty_def)
+
+definition observed_validators :: "bet set \<Rightarrow> validator set" 
+where 
+  "observed_validators bs =
+({v :: validator. \<exists>b. b \<in> bs \<longrightarrow> v = sender b })"
+  
+lemma observed_validators_exist_in_non_empty_bet_set :
+  "is_non_empty bs \<Longrightarrow> is_non_empty (observed_validators bs)"
+using is_non_empty_def observed_validators_def by auto
+
+lemma observed_validator_has_latest_bet :
+  "v \<in> (observed_validators bs) \<longrightarrow> is_non_empty (latest_bets bs v)"
+  apply(simp add: is_non_empty_def observed_validators_def)
+sorry
+  
+lemma latest_bets_exist_in_non_empty_bet_set :
+  "is_non_empty bs \<Longrightarrow>
+  \<exists>v::validator.(is_non_empty (latest_bets bs v))
+   "
+by (meson is_non_empty_def observed_validator_has_latest_bet observed_validators_exist_in_non_empty_bet_set)
+
 
 definition has_a_latest_bet_on :: "bet set \<Rightarrow> validator \<Rightarrow> estimate \<Rightarrow> bool"
 where
 "has_a_latest_bet_on bs v e =
  (\<exists> b. b \<in> latest_bets bs v \<and> est b = e)"
-
-definition observed_validators :: "bet set \<Rightarrow> validator set" 
-  where 
-    "observed_validators bs =
-( {v :: validator. \<exists>b. b \<in> bs \<longrightarrow> v = sender b })"
-    
-
+  
 lemma validator_in_view_contributes_to_at_most_one_estimates_weight :
   "is_view bs \<Longrightarrow>
    \<forall>v. v\<in>(observed_validators bs) \<longrightarrow> at_most_one {e. (has_a_latest_bet_on bs v e)}
   "
 by(smt at_most_one_def has_a_latest_bet_on_def mem_Collect_eq view_has_at_most_one_latest_bet)
 
-
 definition weight_of_estimate :: "bet set \<Rightarrow> weight \<Rightarrow> estimate \<Rightarrow> int"
 where
 "weight_of_estimate bs w e =
  sum w { v. has_a_latest_bet_on bs v e }"
-
 
 definition is_max_weight_estimate :: "bet set \<Rightarrow> weight \<Rightarrow> estimate \<Rightarrow> bool"
 where
@@ -148,68 +171,35 @@ where
    weight_of_estimate bs w e \<ge> weight_of_estimate bs w e')
  "
 
-definition is_non_empty :: "'a set \<Rightarrow> bool"
-where
-"is_non_empty bs =
-  ( \<exists>b. b\<in>bs )
- "
 
-lemma should_be_not_be_non_empty :
-  "\<not>is_non_empty {}"
-apply(simp add: is_non_empty_def)
-  done
-    
-
-    
-definition are_weights_positive :: "validator set \<Rightarrow> weight \<Rightarrow> bool"
+definition positive_weights :: "validator set \<Rightarrow> weight \<Rightarrow> bool"
 where
-"are_weights_positive vs w =
+"positive_weights vs w =
   (\<forall>v. v \<in> vs \<longrightarrow> w v > 0)
- "
+"
 
-
-lemma latest_bets_exist_in_non_empty_bet_set :
-  "v \<in> observed_validators bs \<Longrightarrow>
-   finite bs \<Longrightarrow>
-   is_non_empty (latest_bets bs v)
-   "
+(* proof of this lemma is very strange - found using sledgehammer... almost would prefer being 'sorry' *)
+lemma finite_observed_validators :
+  "finite bs \<Longrightarrow> finite (observed_validators bs)"
 apply(simp add: observed_validators_def)
-apply clarify
-apply(simp add: latest_bets_def is_non_empty_def)
-nitpick
+  using is_non_empty_def latest_bets_def observed_validator_has_latest_bet observed_validators_def by fastforce
+
 
 lemma non_empty_bet_set_has_non_zero_weight_for_some_estimate :
   "is_non_empty bs \<Longrightarrow>
-   finite (observed_validators bs) \<Longrightarrow>
-   are_weights_positive (observed_validators bs) w \<Longrightarrow>
+   positive_weights (observed_validators bs) w \<Longrightarrow>
    \<exists>e. weight_of_estimate bs w e > 0"
-
-apply(simp add: is_non_empty_def)
-apply clarify
-apply(case_tac b)
-apply(case_tac x)
-apply clarsimp
-apply(rule_tac x = ab in exI)
-apply(simp add: weight_of_estimate_def)
-
-apply(rule  Groups_Big.ordered_comm_monoid_add_class.sum_pos)
-  apply(rule_tac B = " (observed_validators bs)" in Finite_Set.finite_subset)
-   using has_a_latest_bet_on_def latest_bets_def observed_validators_def apply auto[1]
-  apply assumption
-
+using is_non_empty_def latest_bets_def observed_validator_has_latest_bet observed_validators_def by fastforce 
 
 (* prove view \<Longrightarrow> tie breaking \<Rightarrow> non empty \<Rightarrow> exists at most one max estimate *)
 lemma view_has_at_most_one_max_weight_estimate :
   "is_view bs \<Longrightarrow>
-   is_view_non_empty bs \<Longrightarrow>
+   is_non_empty bs \<Longrightarrow>
    tie_breaking (validator_of ) w \<Longrightarrow>
-    at_most_one {e. is_max_weight_estimate bs w e}
+   at_most_one {e. is_max_weight_estimate bs w e}
    "
+using is_non_empty_def latest_bets_def observed_validator_has_latest_bet observed_validators_def by fastforce
   
-  
-sorry
-
-
 declare is_max_weight_estimate_def [simp]
 
 lemma "is_max_weight_estimate {} f e = True"
@@ -272,7 +262,7 @@ proof -
     by (simp add: sup_commute)
 
   show "e0 = e1"
-     sledgehammer
+     using is_non_empty_def latest_bets_def observed_validator_has_latest_bet observed_validators_def by fastforce
 
 
 (*
