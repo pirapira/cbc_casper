@@ -184,7 +184,6 @@ lemma finite_observed_validators :
 apply(simp add: observed_validators_def)
   using is_non_empty_def latest_bets_def observed_validator_has_latest_bet observed_validators_def by fastforce
 
-
 lemma non_empty_bet_set_has_non_zero_weight_for_some_estimate :
   "is_non_empty bs \<Longrightarrow>
    positive_weights (observed_validators bs) w \<Longrightarrow>
@@ -264,6 +263,7 @@ proof -
   show "e0 = e1"
      using is_non_empty_def latest_bets_def observed_validator_has_latest_bet observed_validators_def by fastforce
 
+qed
 
 (*
 

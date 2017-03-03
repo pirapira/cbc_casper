@@ -1,0 +1,13 @@
+cache:
+  directories:
+  - $HOME/.isabelle
+  - $HOME/.opam
+sudo: required
+before_install:
+- sudo apt-get -qq update
+- sudo apt-get -qq install libgmp3-dev
+- wget https://isabelle.in.tum.de/dist/Isabelle2016-1_app.tar.gz
+- tar xf Isabelle2016-1_app.tar.gz
+- export PATH=./Isabelle2016-1/bin:$PATH
+script:
+- isabelle build -o quick_and_dirty -j 2 -d . all
