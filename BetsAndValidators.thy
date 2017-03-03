@@ -115,7 +115,20 @@ where
 lemma view_has_at_most_one_latest_bet :
   "is_view bs \<Longrightarrow>
    at_most_one (latest_bets bs v)"
-by (smt at_most_one_def is_view_def latest_bets_def mem_Collect_eq two_latests_are_equivocation)
+apply(auto simp add: at_most_one_def is_view_def)
+apply(drule_tac x = x in spec)
+apply(subgoal_tac "x \<in> bs")
+ apply simp
+ apply(drule_tac x = y in spec)
+ apply(subgoal_tac "y \<in> bs")
+  apply simp
+  using two_latests_are_equivocation apply fastforce
+ apply(auto simp add: latest_bets_def)
+done
+
+(*
+by (meson at_most_one_def is_view_def latest_bets_def mem_Collect_eq two_latests_are_equivocation)
+*)
 
 definition is_non_empty :: "'a set \<Rightarrow> bool"
 where
@@ -157,7 +170,17 @@ lemma validator_in_view_contributes_to_at_most_one_estimates_weight :
   "is_view bs \<Longrightarrow>
    \<forall>v. v\<in>(observed_validators bs) \<longrightarrow> at_most_one {e. (has_a_latest_bet_on bs v e)}
   "
-by(smt at_most_one_def has_a_latest_bet_on_def mem_Collect_eq view_has_at_most_one_latest_bet)
+apply(auto simp add: has_a_latest_bet_on_def at_most_one_def)
+apply(drule_tac v = v in view_has_at_most_one_latest_bet)
+apply(auto simp add: at_most_one_def)
+done
+
+
+
+
+
+(*
+*)
 
 definition weight_of_estimate :: "bet set \<Rightarrow> weight \<Rightarrow> estimate \<Rightarrow> int"
 where
@@ -183,7 +206,6 @@ lemma finite_observed_validators :
   "finite bs \<Longrightarrow> finite (observed_validators bs)"
 apply(simp add: observed_validators_def)
   using is_non_empty_def latest_bets_def observed_validator_has_latest_bet observed_validators_def by fastforce
-
 
 lemma non_empty_bet_set_has_non_zero_weight_for_some_estimate :
   "is_non_empty bs \<Longrightarrow>
@@ -264,6 +286,7 @@ proof -
   show "e0 = e1"
      using is_non_empty_def latest_bets_def observed_validator_has_latest_bet observed_validators_def by fastforce
 
+qed
 
 (*
 
