@@ -143,15 +143,15 @@ by(simp add: is_non_empty_def)
 definition observed_validators :: "bet set \<Rightarrow> validator set" 
 where 
   "observed_validators bs =
-({v :: validator. \<exists>b. b \<in> bs \<longrightarrow> v = sender b })"
+({v :: validator. \<exists>b. b \<in> bs \<and> v = sender b })"
   
 lemma observed_validators_exist_in_non_empty_bet_set :
   "is_non_empty bs \<Longrightarrow> is_non_empty (observed_validators bs)"
-using is_non_empty_def observed_validators_def by auto
+by (simp add: is_non_empty_def observed_validators_def)
 
 lemma observed_validator_has_latest_bet :
   "v \<in> (observed_validators bs) \<longrightarrow> is_non_empty (latest_bets bs v)"
-  apply(simp add: is_non_empty_def observed_validators_def)
+apply(simp add: is_non_empty_def observed_validators_def)
 sorry
   
 lemma latest_bets_exist_in_non_empty_bet_set :
@@ -201,26 +201,29 @@ where
   (\<forall>v. v \<in> vs \<longrightarrow> w v > 0)
 "
 
-(* proof of this lemma is very strange - found using sledgehammer... almost would prefer being 'sorry' *)
 lemma finite_observed_validators :
   "finite bs \<Longrightarrow> finite (observed_validators bs)"
 apply(simp add: observed_validators_def)
-  using is_non_empty_def latest_bets_def observed_validator_has_latest_bet observed_validators_def by fastforce
+done
+
 
 lemma non_empty_bet_set_has_non_zero_weight_for_some_estimate :
   "is_non_empty bs \<Longrightarrow>
    positive_weights (observed_validators bs) w \<Longrightarrow>
    \<exists>e. weight_of_estimate bs w e > 0"
-using is_non_empty_def latest_bets_def observed_validator_has_latest_bet observed_validators_def by fastforce 
+proof -
+oops
+
 
 (* prove view \<Longrightarrow> tie breaking \<Rightarrow> non empty \<Rightarrow> exists at most one max estimate *)
 lemma view_has_at_most_one_max_weight_estimate :
   "is_view bs \<Longrightarrow>
    is_non_empty bs \<Longrightarrow>
-   tie_breaking (validator_of ) w \<Longrightarrow>
+   tie_breaking (observed_validators bs) w \<Longrightarrow>
    at_most_one {e. is_max_weight_estimate bs w e}
    "
-using is_non_empty_def latest_bets_def observed_validator_has_latest_bet observed_validators_def by fastforce
+oops
+
   
 declare is_max_weight_estimate_def [simp]
 
@@ -284,9 +287,7 @@ proof -
     by (simp add: sup_commute)
 
   show "e0 = e1"
-     using is_non_empty_def latest_bets_def observed_validator_has_latest_bet observed_validators_def by fastforce
-
-qed
+    oops
 
 (*
 
