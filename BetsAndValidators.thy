@@ -517,15 +517,7 @@ proof -
   moreover assume t: "tie_breaking (observed_validators (b0 \<union> b1)) w"
   ultimately have
    unique: "at_most_one {e. is_max_weight_estimate (b0 \<union> b1) w e}"
-    proof -
-      show "at_most_one {e. is_max_weight_estimate (b0 \<union> b1) w e}"
-      apply(rule view_has_at_most_one_max_weight_estimate)
-         apply (metis Un_commute \<open>is_future_view w (b1 \<union> b0) b1\<close> is_future_view_def is_valid_view_def)
-        apply (simp add: \<open>finite b0\<close> \<open>finite b1\<close>)
-       apply (metis \<open>is_non_empty b0\<close> is_non_empty_def set_rev_mp sup.cobounded2 sup.commute)
-    	apply (simp add: \<open>positive_weights (observed_validators b0) w\<close> \<open>positive_weights (observed_validators b1) w\<close> positive_weights_on_union_of_bets)
-     by (simp add: t)
-    qed
+    by (metis \<open>consistent_views w b0 b1\<close> consistent_views_def e0 f0 f1 finite_UnI is_non_empty_def is_valid_view_def p0 p1 positive_weights_on_union_of_bets set_rev_mp sup_commute sup_ge2 t view_has_at_most_one_max_weight_estimate)
   show "e0 = e1"
 by (meson at_most_one_def max0 max1 mem_Collect_eq unique)
 qed
