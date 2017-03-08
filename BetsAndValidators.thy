@@ -221,12 +221,6 @@ apply(auto simp add: at_most_one_def)
 done
 
 
-
-
-
-(*
-*)
-
 definition weight_of_estimate :: "bet set \<Rightarrow> weight \<Rightarrow> estimate \<Rightarrow> int"
 where
 "weight_of_estimate bs w e =
@@ -251,13 +245,46 @@ lemma finite_observed_validators :
 apply(simp add: observed_validators_def)
 done
 
+lemma some_bets_imply_some_validators :
+  "is_non_empty bs \<Longrightarrow> is_non_empty (observed_validators bs)"
+by (simp add: observed_validators_exist_in_non_empty_bet_set)
+
+lemma finite_latest_betters_if_only_finite_bets :
+ "finite bs \<Longrightarrow>
+  finite {v. has_a_latest_bet_on bs v e}"
+apply(simp add: has_a_latest_bet_on_def latest_bets_def)
+done
+
+lemma any_latest_bet_witnesses_a_validator:
+  "Bet (e, v', js) \<in> latest_bets bs v \<Longrightarrow> {v. has_a_latest_bet_on bs v e} \<noteq> {}"
+apply(auto simp add: latest_bets_def has_a_latest_bet_on_def)
+done
+
+lemma latest_bets_have_positive_weights :
+   "finite bs \<Longrightarrow>
+    positive_weights (observed_validators bs) w \<Longrightarrow>
+    Bet (e, v', js) \<in> latest_bets bs v \<Longrightarrow>
+    weight_of_estimate bs w e > 0"
+apply(auto simp add: weight_of_estimate_def)
+apply(rule Groups_Big.ordered_comm_monoid_add_class.sum_pos)
+  apply(simp add: finite_latest_betters_if_only_finite_bets)
+ using any_latest_bet_witnesses_a_validator apply blast
+using has_a_latest_bet_on_def latest_bets_def observed_validators_def positive_weights_def by auto
 
 lemma non_empty_bet_set_has_non_zero_weight_for_some_estimate :
-  "is_non_empty bs \<Longrightarrow>
+  "finite bs \<Longrightarrow>
+   is_non_empty bs \<Longrightarrow>
    positive_weights (observed_validators bs) w \<Longrightarrow>
    \<exists>e. weight_of_estimate bs w e > 0"
-proof -
-oops
+apply(subgoal_tac "
+  \<exists>v::validator.(is_non_empty (latest_bets bs v))")
+ defer
+ using latest_bets_exist_in_non_empty_bet_set apply auto[1]
+apply(auto simp add: is_non_empty_def)
+apply(case_tac ba)
+apply(case_tac x)
+apply simp
+using latest_bets_have_positive_weights by blast
 
 
 (* prove view \<Longrightarrow> tie breaking \<Rightarrow> non empty \<Rightarrow> exists at most one max estimate *)
@@ -265,10 +292,9 @@ lemma view_has_at_most_one_max_weight_estimate :
   "is_view bs \<Longrightarrow>
    is_non_empty bs \<Longrightarrow>
    tie_breaking (observed_validators bs) w \<Longrightarrow>
-   at_most_one {e. is_max_weight_estimate bs w e}
-   "
+   at_most_one {e. is_max_weight_estimate bs w e}"
+apply(auto simp add: is_max_weight_estimate_def at_most_one_def)
 oops
-
   
 declare is_max_weight_estimate_def [simp]
 
