@@ -245,10 +245,6 @@ lemma finite_observed_validators :
 apply(simp add: observed_validators_def)
 done
 
-lemma some_bets_imply_some_validators :
-  "is_non_empty bs \<Longrightarrow> is_non_empty (observed_validators bs)"
-by (simp add: observed_validators_exist_in_non_empty_bet_set)
-
 lemma finite_latest_betters_if_only_finite_bets :
  "finite bs \<Longrightarrow>
   finite {v. has_a_latest_bet_on bs v e}"
@@ -479,7 +475,6 @@ done
 lemma consensus_safety :
   "finite b0 \<Longrightarrow>
    finite b1 \<Longrightarrow>
-   is_non_empty b0 \<Longrightarrow>
    is_non_empty b1 \<Longrightarrow>
    positive_weights (observed_validators b0) w \<Longrightarrow>
    positive_weights (observed_validators b1) w \<Longrightarrow>
@@ -510,14 +505,13 @@ proof -
 
   assume f0: "finite b0"
   moreover assume f1: "finite b1"
-  moreover assume e0: "is_non_empty b0"
   moreover assume e1: "is_non_empty b1"
   moreover assume p0: "positive_weights (observed_validators b0) w"
   moreover assume p1: "positive_weights (observed_validators b1) w"
   moreover assume t: "tie_breaking (observed_validators (b0 \<union> b1)) w"
   ultimately have
    unique: "at_most_one {e. is_max_weight_estimate (b0 \<union> b1) w e}"
-    by (metis \<open>consistent_views w b0 b1\<close> consistent_views_def e0 f0 f1 finite_UnI is_non_empty_def is_valid_view_def p0 p1 positive_weights_on_union_of_bets set_rev_mp sup_commute sup_ge2 t view_has_at_most_one_max_weight_estimate)
+    by (metis \<open>consistent_views w b0 b1\<close> consistent_views_def f0 f1 finite_UnI is_non_empty_def is_valid_view_def p0 p1 positive_weights_on_union_of_bets set_rev_mp sup_ge2 t view_has_at_most_one_max_weight_estimate)
   show "e0 = e1"
 by (meson at_most_one_def max0 max1 mem_Collect_eq unique)
 qed
