@@ -89,6 +89,14 @@ apply(subgoal_tac "tran justifies a (Bet xa)  = (justifies a (Bet xa) \<or> (\<e
 apply auto
 by (meson is_dependency_tail_first justifies.simps)
 
+lemma dependency_is_transitive :
+  "is_dependency y z \<Longrightarrow> \<forall> x. is_dependency x y \<longrightarrow> is_dependency x z"
+apply(simp add: is_dependency_def)
+apply(induction rule: tran.induct)
+ using tran_composit apply blast
+using tran_composit by blast
+
+
 definition equivocation :: "bet \<Rightarrow> bet \<Rightarrow> bool"
 where
 "equivocation b0 b1 =
@@ -101,6 +109,44 @@ where
 definition latest_bets :: "bet set \<Rightarrow> validator \<Rightarrow> bet set"
 where
 " latest_bets bs v = { l . l \<in> bs \<and> sender l = v \<and> (\<not> (\<exists> b'. b' \<in> bs \<and> sender b' = v \<and> is_dependency l b')) } "
+
+definition is_latest_in :: "bet \<Rightarrow> bet set \<Rightarrow> bool"
+where
+"is_latest_in b bs = (b \<in> bs \<and> (\<not> (\<exists> b'. b' \<in> bs \<and> is_dependency b b')))"
+
+lemma latest_bets_are_latest_in :
+"(latest_bets bs v) = {b. (is_latest_in b {b' . b' \<in> bs \<and> sender b' = v})}"
+apply(auto simp add: is_latest_in_def latest_bets_def)
+done
+
+definition is_non_empty :: "'a set \<Rightarrow> bool"
+where
+"is_non_empty bs =
+  ( \<exists>b. b\<in>bs )"
+
+lemma latest_existence' :
+  "finite bs \<Longrightarrow> is_non_empty bs \<longrightarrow> (\<exists> l. is_latest_in l bs)"
+apply(rule finite_induct)
+  apply simp
+ apply (simp add: is_non_empty_def)
+apply(case_tac "is_non_empty F")
+ defer
+ apply(simp add: is_non_empty_def)
+ apply(rule_tac x = x in exI)
+ using dependency_no_cycle is_latest_in_def apply auto[1]
+apply auto
+apply(case_tac "is_dependency l x")
+ defer
+ apply(rule_tac x = l in exI)
+ using is_latest_in_def apply auto[1]
+apply(rule_tac x = x in exI)
+apply(auto simp add: is_latest_in_def)
+ using dependency_no_cycle apply blast
+using dependency_is_transitive by blast
+
+lemma latest_existence :
+  "finite bs \<Longrightarrow> is_non_empty bs \<Longrightarrow> (\<exists> l. is_latest_in l bs)"
+using latest_existence' by auto
 
 lemma two_latests_are_equivocation :
   "b0 \<in> latest_bets bs v \<Longrightarrow> b1 \<in> latest_bets bs v \<Longrightarrow> b0 \<noteq> b1 \<Longrightarrow> equivocation b0 b1"
@@ -130,11 +176,6 @@ done
 by (meson at_most_one_def is_view_def latest_bets_def mem_Collect_eq two_latests_are_equivocation)
 *)
 
-definition is_non_empty :: "'a set \<Rightarrow> bool"
-where
-"is_non_empty bs =
-  ( \<exists>b. b\<in>bs )
-"
 
 lemma should_be_not_be_non_empty :
   "\<not>is_non_empty {}"
@@ -150,22 +191,26 @@ lemma observed_validators_exist_in_non_empty_bet_set :
 by (simp add: is_non_empty_def observed_validators_def)
 
 lemma observed_validator_has_latest_bet :
-  "v \<in> (observed_validators bs) \<longrightarrow> is_non_empty (latest_bets bs v)"
+  "finite bs \<longrightarrow> v \<in> (observed_validators bs) \<longrightarrow> is_non_empty (latest_bets bs v)"
 apply(simp add: is_non_empty_def observed_validators_def)
-sorry
+apply(simp add: latest_bets_are_latest_in)
+apply clarify
+apply(rule latest_existence)
+ apply auto
+using is_non_empty_def by blast
   
 lemma latest_bets_exist_in_non_empty_bet_set :
-  "is_non_empty bs \<Longrightarrow>
+  "finite bs \<Longrightarrow>
+   is_non_empty bs \<Longrightarrow>
   \<exists>v::validator.(is_non_empty (latest_bets bs v))
    "
 by (meson is_non_empty_def observed_validator_has_latest_bet observed_validators_exist_in_non_empty_bet_set)
-
 
 definition has_a_latest_bet_on :: "bet set \<Rightarrow> validator \<Rightarrow> estimate \<Rightarrow> bool"
 where
 "has_a_latest_bet_on bs v e =
  (\<exists> b. b \<in> latest_bets bs v \<and> est b = e)"
-  
+
 lemma validator_in_view_contributes_to_at_most_one_estimates_weight :
   "is_view bs \<Longrightarrow>
    \<forall>v. v\<in>(observed_validators bs) \<longrightarrow> at_most_one {e. (has_a_latest_bet_on bs v e)}
